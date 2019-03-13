@@ -1,0 +1,79 @@
+%%time
+#otfiltrovatj resultat, nado poluchitj spisok paragrofov i smotretj na sootvetsrtvija(interesuet soderzanie tega m iz м. Комсомольская
+#filtruem i ubiraem ne relevantnqe objavlenija
+#isli v nazvanii objavlenija imeetsja ukazanija na naw  poisk http zapros , togda mq ego berem
+# nuzno dobavitj encoding utf-8 zdesj
+
+#HTC	3 000  โฝ	ะผ.ย ะะฐะปัะถัะบะฐั	https://www.avito.ru/yaya/telefony/htc_1192666842
+
+#
+import requests
+from bs4 import BeautifulSoup
+import csv
+
+def get_html(url):
+    r = requests.get(url)
+    return r.text
+
+def get_total_pages(html):
+    soup = BeautifulSoup(html, 'lxml')
+    pages = soup.find('div', class_ = 'pagination js-pages').find_all('a', class_ = 'pagination-page')[-1].get('href')
+    total_pages = pages.split('=')[1].split('&')[0]
+    return int(total_pages)
+
+def write_csv(data):
+    with open('/home/vlad_pc/Desktop/TRAINNING/avito_data_parsing/avita_filtered2.csv', 'a', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow((data['title'],
+                         data['price'],
+                         data['metro'],
+                         data['url']))
+        
+def get_page_data(html):
+    soup = BeautifulSoup(html, 'lxml')
+    ads = soup.find('div', class_ = 'catalog-list').find_all('div', class_ = 'item_table')
+    for ad in ads:
+#sozdaem cikl sravnenij
+        name = ad.find('div', class_ = 'description').find('h3').find('a').text.strip().lower()#niznii registr
+        #esli estj imja teleefona
+        if 'htc' in name:
+        
+            try:
+                title = ad.find('div', class_ = 'description').find('h3').find('a').text.strip()
+            except:
+                title = ''
+            try:
+                url = 'https://www.avito.ru' + ad.find('div', class_ = 'description').find('h3').find('a').get('href')
+            except:
+                url = ''
+            try:
+                price = ad.find('div', class_ = 'about').text.strip()
+            except:
+                price = ''
+            try:
+                metro = ad.find('div', class_ = 'data').find_all('p')[-1].text.strip()
+            except:
+                metro = ''
+
+            data = {'title': title,
+                   'price': price,
+                   'metro': metro,
+                   'url': url}
+            write_csv(data)
+        else:
+            continue#esli net to cikl idet daljwe
+
+def main():
+    url = 'https://www.avito.ru/moskva/telefony?p=1&q=htc'
+    base_url = 'https://www.avito.ru/moskva/telefony?'
+    page_part = 'p='
+    query_part = '&q=htc'
+    total_pages = get_total_pages(get_html(url))
+    for i in range(4):
+        url_gen = base_url + page_part + str(i) + query_part
+        html = get_html(url_gen)
+    get_page_data(html)
+        
+if __name__ == "__main__":
+    main()
+
